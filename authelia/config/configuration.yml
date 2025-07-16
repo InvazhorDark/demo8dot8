@@ -1,0 +1,46 @@
+###############################################################
+# Authelia 4.39 – Config básico para demo Zero Trust
+###############################################################
+
+server:
+  address: "tcp://0.0.0.0:9091"
+
+log:
+  level: info
+
+jwt_secret: "CAMBIA_ESTE_SECRETO_32BYTES_MIN"
+
+session:
+  secret: "OTRO_SECRETO_ALEATORIO_32BYTES"
+  cookies:
+    - name: authelia_session
+      domain: demo.8dot8.local
+      authelia_url: https://login.demo.8dot8.local
+  expiration: 1h
+  inactivity: 5m
+  redis:
+    host: redis
+    port: 6379
+
+storage:
+  encryption_key: "CLAVE_AES_32BYTES_MINIMA_CAMBIALA"
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  smtp:
+    address: mailhog:1025
+    sender: 'authelia@demo.8dot8.local'
+    disable_require_tls: true
+    
+authentication_backend:
+  disable_reset_password: true
+  file:
+    path: /config/users_database.yml
+
+access_control:
+  default_policy: two_factor
+  rules:
+    - domain: "app.demo.8dot8.local"
+      policy: two_factor
+      subject: ["group:admins"]

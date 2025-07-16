@@ -1,0 +1,26 @@
+entryPoints:
+  web:                 # ← nuevo, para el dashboard
+    address: ":8081"
+  websecure:
+    address: ":443"
+
+certificatesResolvers:
+  static:
+    acme:
+      email: dummy@local        # requerido aunque no se use
+      storage: /tmp/acme.json   # requerido
+
+tls:
+  certificates:
+    - certFile: /certs/demo.8dot8.local.crt
+      keyFile:  /certs/demo.8dot8.local.key
+
+
+providers:
+  docker:
+    exposedByDefault: false
+
+
+api:
+  dashboard: true
+  insecure: true  # ← nuevo, para el dashboard

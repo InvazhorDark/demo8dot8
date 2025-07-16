@@ -1,0 +1,89 @@
+# version: "3.9"
+
+services:
+  traefik:
+    image: traefik:2.9.10
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--api.dashboard=true"
+
+      - "--entrypoints.web.address=:8081"
+
+      - "--api.insecure=true"  # Habilita el dashboard de Traefik
+      # Carga del certificado autofirmado
+      # - "--tls.certificates=/certs/demo.8dot8.local.crt,/certs/demo.8dot8.local.key"
+    ports:
+      - "443:443"
+      - "8081:8080"  # Para el dashboard de Traefik
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
+      - "./certs:/certs:ro"
+    depends_on:
+      - authelia
+      - whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=PathPrefix(`/dashboard`) || PathPrefix(`/api`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+    networks:
+      - default
+      - internal
+
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    volumes:
+      - "./authelia/config/configuration.yml:/config/configuration.yml:ro"
+      - "./authelia/config/users_database.yml:/config/users_database.yml"
+    networks: [internal]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authelia.tls=true" # Habilita TLS para Authelia
+      - "traefik.http.routers.authelia.rule=Host(`login.demo.8dot8.local`)"
+      - "traefik.http.routers.authelia.entrypoints=websecure"
+      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+
+      # Middleware forward-auth  (ojo a la A mayúscula)
+      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify"
+      - "traefik.http.middlewares.authelia.forwardauth.trustforwardheader=true"
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"   # Interfaz web
+      - "1025:1025"   # SMTP
+    networks: [internal]  # MailHog para pruebas de correo electrónico
+
+
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    networks: [internal]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.tls=true"  # Habilita TLS para el servicio whoami
+      - "traefik.http.routers.whoami.rule=Host(`app.demo.8dot8.local`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.middlewares=authelia@docker"
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+networks:
+  default:
+  internal:
+    driver: bridge

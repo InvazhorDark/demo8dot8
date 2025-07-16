@@ -1,0 +1,20 @@
+[req]
+default_bits        = 4096
+prompt              = no
+default_md          = sha256
+req_extensions      = req_ext
+distinguished_name  = dn
+
+[dn]
+C  = CL
+ST = Santiago
+L  = Cyber
+O  = Demo
+CN = *.demo.8dot8.local
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = *.demo.8dot8.local
+DNS.2 = demo.8dot8.local
